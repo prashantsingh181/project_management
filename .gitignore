@@ -1,0 +1,49 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+
+# ---------- Virtual environments ----------
+# Never commit a venv: it hardcodes absolute paths and platform-specific
+# binaries, so it's broken on any other machine. Everyone recreates their
+# own from requirements.txt (Python's package.json).
+venv/
+.venv/
+env/
+ENV/
+
+# ---------- Django ----------
+# Local SQLite dev database — data, not code. Keep it out of version control.
+*.sqlite3
+db.sqlite3
+db.sqlite3-journal
+
+# Django logs
+*.log
+
+# Collected static files (output of `collectstatic`, generated at deploy time).
+# Your source static/ folders are NOT ignored — only the build output.
+/staticfiles/
+/static_root/
+
+# User-uploaded media (e.g. profile pictures) — runtime data, not code.
+/media/
+
+# Local settings / secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# ---------- Editors / OS ----------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ---------- Test / coverage ----------
+.pytest_cache/
+.coverage
+htmlcov/
