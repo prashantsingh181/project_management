@@ -1,6 +1,30 @@
 from rest_framework import serializers
 
-from .models import Comment, Task
+from .models import Attachment, Comment, Task
+
+
+class TaskBulkUpdateSerializer(serializers.ListSerializer):
+    def update(self, instance, validated_data):
+        instance_mapping = {obj.id: obj for obj in instance}
+
+        updated_objects = []
+        updated_fields = set()
+
+        for item in validated_data:
+            object_id = item.get("id")
+            obj = instance_mapping.get(object_id)
+
+            if obj:
+                for attr, value in item.items():
+                    setattr(obj, attr, value)
+                    if attr != "id":
+                        updated_fields.add(attr)
+                updated_objects.append(obj)
+
+        if updated_objects:
+            self.child.Meta.model.objects.bulk_update(updated_objects, fields=list(updated_fields))
+
+        return updated_objects
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -26,6 +50,8 @@ class TaskSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+        list_serializer_class = TaskBulkUpdateSerializer
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,3 +111,23 @@ class TaskCommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ("body", "author", "id", "created_at")
         read_only_fields = ("author", "created_at")
+
+
+class TaskMoveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ("project", "title", "description", "status", "position", "priority")
+        read_only_fields = ("project", "title", "description", "status", "priority")
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = ("id", "upload", "uploaded_by", "uploaded_at", "task")
+        read_only_fields = ("task", "uploaded_by", "uploaded_at")
+
+    def validate_upload(self, file):
+        max_mb = 2
+        if file.size > max_mb * 1024 * 1024:
+            raise serializers.ValidationError({"upload": "File must be under {max_mb} MB."})
+        return file

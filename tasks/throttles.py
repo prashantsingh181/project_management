@@ -9,3 +9,12 @@ class CommentCreationThrottle(UserRateThrottle):
         if request.method != "POST":
             return True
         return super().allow_request(request, view)
+
+
+class AttachmentUploadThrottle(UserRateThrottle):
+    scope = "attachment_upload"
+
+    def allow_request(self, request, view):
+        if request.method != "POST":
+            return True
+        return super().allow_request(request, view)

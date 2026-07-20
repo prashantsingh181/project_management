@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -19,6 +20,12 @@ class ProjectViewset(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = (IsOwnerOrAdminOrReadonly,)
 
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
+    filterset_fields = ("is_archived",)
+    search_fields = ("name", "description")
+    ordering_fields = ("created_at",)
+    order = ("created_at",)
+
     def get_queryset(self):
         user = self.request.user
         return Project.objects.filter(memberships__user=user, is_archived=False)
@@ -26,9 +33,9 @@ class ProjectViewset(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         with transaction.atomic():
             instance = serializer.save(owner=self.request.user)
-            Membership.objects.create(
-                project=instance, user=instance.owner, role=Membership.Role.OWNER
-            )
+            m = Membership(project=instance, user=instance.owner, role=Membership.Role.OWNER)
+            m._actor = self.request.user
+            m.save()
         return instance
 
     def destroy(self, request, *args, **kwargs):
@@ -66,8 +73,12 @@ class ProjectViewset(viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 else:
-                    serializer.save(project=project)
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                    membership = Membership(project=project, user=serializer.validated_data["user"])
+                    membership._actor = request.user
+                    membership.save()
+                    return Response(
+                        ProjectMembershipSerializer(membership).data, status=status.HTTP_201_CREATED
+                    )
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
